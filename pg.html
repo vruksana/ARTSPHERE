@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Photo Gallery</title>
+    <style>
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(to top left, #28b487, #7dd56f);
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .gallery-container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #28b487;
+        }
+        .auth-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .auth-input {
+            margin: 5px 0;
+            padding: 10px;
+            width: 80%;
+        }
+        .button {
+            padding: 10px 15px;
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .error {
+            color: red;
+        }
+        .main-image {
+            display: flex;
+            justify-content: left;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            max-width: 600px;
+            max-height: 400px;
+            overflow: hidden;
+        }
+        .main-image img {
+            max-width: 100%;
+            border-radius: 8px;
+            transition: transform 0.3s;
+        }
+        .caption {
+            text-align: left;
+            margin-top: 10px;
+            font-size: 1.2em;
+            color: #333;
+        }
+        .upload-container {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .thumbnails {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .thumbnail-container {
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            width: calc(20% - 10px);
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .thumbnail {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .details {
+            text-align: left;
+            margin-top: 5px;
+            font-size: 0.9em;
+            white-space: normal;
+            overflow: hidden;
+            border-top: 1px solid #ddd; /* Border between image and details */
+            padding-top: 5px; /* Padding above details */
+        }
+        .delete-button, .update-button {
+            margin-top: 5px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+            display: none;
+        }
+        .delete-button:hover {
+            background-color: #c0392b;
+        }
+        .update-button {
+            background-color: #3498db;
+        }
+        .update-button:hover {
+            background-color: #2980b9;
+        }
+        .login-message {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="gallery-container">
+        <h1>PHOTO GALLERY</h1>
+        
+        <div id="authContainer" class="auth-container">
+            <h2>Create Account</h2>
+            <input type="email" id="registerEmail" class="auth-input" placeholder="Enter Gmail" required>
+            <input type="password" id="registerPassword" class="auth-input" placeholder="Enter Password" required>
+            <button id="registerButton" class="button">Create Account</button>
+            <div class="error" id="registerError"></div>
+            <div id="loginPrompt" class="login-message" style="display: none;">
+                Account already created. <a href="#" id="goToLogin">Log In</a>
+            </div>
+            <button id="showLoginButton" class="button" style="margin-top: 10px;">Log In</button>
+        </div>
+
+        <div id="loginContainer" class="auth-container" style="display:none;">
+            <h2>Login</h2>
+            <input type="email" id="loginEmail" class="auth-input" placeholder="Enter Gmail" required>
+            <input type="password" id="loginPassword" class="auth-input" placeholder="Enter Password" required>
+            <button id="loginButton" class="button">Login</button>
+            <div class="error" id="loginError"></div>
+            <button id="backToRegisterButton" class="button" style="margin-top: 10px;">Back to Create Account</button>
+        </div>
+
+        <div id="gallery" style="display:none;">
+            <div class="main-image" id="mainImageContainer">
+                <figure id="mainImageFigure">
+                    <img id="mainImage" src="" alt="Main Photo">
+                    <figcaption class="caption">No Image Selected</figcaption>
+                </figure>
+            </div>
+
+            <div class="upload-container">
+                <label for="uploadPhoto">Upload a new photo:</label>
+                <input type="file" id="uploadPhoto" accept="image/*">
+                <div class="error" id="uploadError"></div>
+            </div>
+
+            <div>
+                <input type="text" id="imageTitle" placeholder="Enter title" />
+                <textarea id="imageDescription" placeholder="Enter description" rows="1"></textarea>
+                <button id="deleteButton" class="delete-button">Delete</button>
+                <button id="updateButton" class="update-button">Update</button>
+            </div>
+
+            <div class="thumbnails" id="thumbnailContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        const imagesDetails = {};
+        let currentImageSrc = '';
+
+        document.getElementById('registerButton').addEventListener('click', function() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const registerError = document.getElementById('registerError');
+
+            registerError.textContent = '';
+
+            if (!email || !password) {
+                registerError.textContent = 'Please enter both fields.';
+                return;
+            }
+
+            const existingUser = JSON.parse(localStorage.getItem(email));
+            if (existingUser) {
+                registerError.textContent = 'Account already exists. Please log in.';
+                document.getElementById('loginPrompt').style.display = 'block';
+                return;
+            }
+
+            localStorage.setItem(email, JSON.stringify({ password, images: {} }));
+            alert('Account created successfully! You can now log in.');
+
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'block';
+        });
+
+        document.getElementById('goToLogin').addEventListener('click', function() {
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('loginPrompt').style.display = 'none';
+        });
+
+        document.getElementById('showLoginButton').addEventListener('click', function() {
+            document.getElementById('loginContainer').style.display = 'block';
+            document.getElementById('authContainer').style.display = 'none';
+        });
+
+        document.getElementById('backToRegisterButton').addEventListener('click', function() {
+            document.getElementById('authContainer').style.display = 'block';
+            document.getElementById('loginContainer').style.display = 'none';
+        });
+
+        document.getElementById('loginButton').addEventListener('click', function() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const loginError = document.getElementById('loginError');
+
+            loginError.textContent = '';
+
+            const storedUser = JSON.parse(localStorage.getItem(email));
+            if (!storedUser || storedUser.password !== password) {
+                loginError.textContent = 'Invalid credentials. Please try again.';
+                return;
+            }
+
+            currentUser = email;
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('gallery').style.display = 'block';
+
+            loadGallery();
+        });
+
+        function loadGallery() {
+            const storedUser = JSON.parse(localStorage.getItem(currentUser));
+            const storedImages = storedUser.images || {};
+            for (const src in storedImages) {
+                const { title, description } = storedImages[src];
+                createThumbnail(src, title, description);
+                imagesDetails[src] = { title, description };
+            }
+        }
+
+        function createThumbnail(newImageSrc, title, description) {
+            const newThumbnailContainer = document.createElement('div');
+            newThumbnailContainer.className = 'thumbnail-container';
+
+            const newThumbnail = document.createElement('a');
+            newThumbnail.href = '#';
+            newThumbnail.onclick = function() {
+                changeImage(newImageSrc);
+            };
+
+            const newImg = document.createElement('img');
+            newImg.classList.add('thumbnail');
+            newImg.src = newImageSrc;
+            newImg.alt = title;
+
+            newThumbnail.appendChild(newImg);
+            newThumbnailContainer.appendChild(newThumbnail);
+
+            const newDetails = document.createElement('div');
+            newDetails.className = 'details';
+            newDetails.innerHTML = `<h4>${title}</h4><p>${description}</p>`;
+            newThumbnailContainer.appendChild(newDetails);
+
+            document.getElementById('thumbnailContainer').appendChild(newThumbnailContainer);
+        }
+
+        document.getElementById('uploadPhoto').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const uploadError = document.getElementById('uploadError');
+
+            uploadError.textContent = '';
+
+            if (file) {
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!validTypes.includes(file.type)) {
+                    uploadError.textContent = 'Please upload a valid image file (JPEG, PNG, GIF).';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const newImageSrc = e.target.result;
+                    const title = document.getElementById('imageTitle').value || file.name;
+                    const description = document.getElementById('imageDescription').value || '';
+
+                    const storedUser = JSON.parse(localStorage.getItem(currentUser));
+                    storedUser.images[newImageSrc] = { title, description };
+                    localStorage.setItem(currentUser, JSON.stringify(storedUser));
+
+                    imagesDetails[newImageSrc] = { title, description };
+                    createThumbnail(newImageSrc, title, description);
+                    changeImage(newImageSrc);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function changeImage(imageSrc) {
+            const mainImage = document.getElementById('mainImage');
+            mainImage.src = imageSrc;
+            const caption = document.querySelector('.caption');
+            caption.textContent = imagesDetails[imageSrc]?.title || 'Uploaded Image';
+
+            currentImageSrc = imageSrc;
+
+            const details = imagesDetails[imageSrc] || { title: '', description: '' };
+            document.getElementById('imageTitle').value = details.title;
+            document.getElementById('imageDescription').value = details.description;
+
+            document.getElementById('deleteButton').style.display = 'block';
+            document.getElementById('updateButton').style.display = 'block';
+        }
+
+        document.getElementById('updateButton').addEventListener('click', function() {
+            if (currentImageSrc && imagesDetails[currentImageSrc]) {
+                const title = document.getElementById('imageTitle').value || imagesDetails[currentImageSrc].title;
+                const description = document.getElementById('imageDescription').value || imagesDetails[currentImageSrc].description;
+
+                imagesDetails[currentImageSrc] = { title, description };
+
+                const storedUser = JSON.parse(localStorage.getItem(currentUser));
+                storedUser.images[currentImageSrc] = { title, description };
+                localStorage.setItem(currentUser, JSON.stringify(storedUser));
+
+                document.getElementById('thumbnailContainer').innerHTML = '';
+                loadGallery();
+                changeImage(currentImageSrc);
+            }
+        });
+
+        document.getElementById('deleteButton').addEventListener('click', function() {
+            if (currentImageSrc && imagesDetails[currentImageSrc]) {
+                if (confirm("Are you sure you want to delete this image?")) {
+                    delete imagesDetails[currentImageSrc];
+
+                    const storedUser = JSON.parse(localStorage.getItem(currentUser));
+                    delete storedUser.images[currentImageSrc];
+                    localStorage.setItem(currentUser, JSON.stringify(storedUser));
+
+                    document.getElementById('thumbnailContainer').innerHTML = '';
+                    loadGallery();
+                    changeImage('');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
