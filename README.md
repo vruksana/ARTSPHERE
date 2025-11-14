@@ -20,4 +20,4 @@ This platform is ideal for people who cannot physically visit art exhibitions or
 ## How to Run
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/ARTSPHERE-WAD.git
+git clone https://github.com/vruksana/ARTSPHERE-WAD.git
